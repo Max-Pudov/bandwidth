@@ -11,11 +11,14 @@
         <property name="serviceConfiguration">
             <list>
                 <bean class="org.apache.ignite.services.ServiceConfiguration">
-                    <property name="name" value="BackupService"/>
+                    <property name="name" value="BackupService1"/>
                     <property name="maxPerNodeCount" value="1"/>
                     <property name="totalCount" value="1"/>
                     <property name="service">
-                        <ref bean="backupService"/>
+                        <bean class="bandwidth.BackupService">
+                            <property name="expirationTime" value="10000"/>
+                            <property name="updateInterval" value="1000"/>
+                        </bean>
                     </property>
                 </bean>
             </list>
@@ -74,10 +77,5 @@
                 </bean>
             </list>
         </property>
-    </bean>
-
-    <bean id="backupService" class="bandwidth.BackupService">
-        <property name="expirationTime" value="600000"/>
-        <property name="updateInterval" value="60000"/>
     </bean>
 </beans>
