@@ -4,6 +4,7 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.CachePeekMode;
+import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
 import org.apache.ignite.services.Service;
@@ -32,22 +33,7 @@ public class BackupService implements Service {
     public void execute(ServiceContext ctx) {
         while (true) {
             try {
-                IgniteCache<String, PhoneCall> phoneCalls = ignite.cache("PhoneCalls");
-                IgniteCache<String, PhoneCall> phoneCallsBackup = ignite.cache("PhoneCallsBackup");
-
-                long now = System.currentTimeMillis();
-
-                phoneCalls.localEntries(CachePeekMode.PRIMARY).forEach(e -> {
-                    String key = e.getKey();
-                    PhoneCall call = e.getValue();
-
-                    if (call.getEndTime() == -1 &&
-                        now - call.getStartTime() >= expirationTime &&
-                        !phoneCallsBackup.containsKey(key)) {
-
-                        phoneCallsBackup.put(key, call);
-                    }
-                });
+                ignite.compute().broadcast(new BackupJob(expirationTime));
             }
             catch (Exception e) {
                 log.error(e.getMessage());
@@ -68,5 +54,35 @@ public class BackupService implements Service {
 
     public void setUpdateInterval(int updateInterval) {
         this.updateInterval = updateInterval;
+    }
+
+    private static class BackupJob implements IgniteRunnable {
+        private final long expirationTime;
+
+        @IgniteInstanceResource
+        private transient Ignite ignite;
+
+        public BackupJob(long expirationTime) {
+            this.expirationTime = expirationTime;
+        }
+
+        @Override public void run() {
+            IgniteCache<String, PhoneCall> phoneCalls = ignite.cache("PhoneCalls");
+            IgniteCache<String, PhoneCall> phoneCallsBackup = ignite.cache("PhoneCallsBackup");
+
+            long now = System.currentTimeMillis();
+
+            phoneCalls.localEntries(CachePeekMode.PRIMARY).forEach(e -> {
+                String key = e.getKey();
+                PhoneCall call = e.getValue();
+
+                if (call.getEndTime() == -1 &&
+                    now - call.getStartTime() >= expirationTime &&
+                    !phoneCallsBackup.containsKey(key)) {
+
+                    phoneCallsBackup.put(key, call);
+                }
+            });
+        }
     }
 }
