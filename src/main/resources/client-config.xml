@@ -20,11 +20,5 @@
                 </property>
             </bean>
         </property>
-        <property name="pluginConfigurations">
-            <list>
-                <bean class="org.gridgain.grid.configuration.GridGainConfiguration">
-                </bean>
-            </list>
-        </property>
     </bean>
 </beans>
